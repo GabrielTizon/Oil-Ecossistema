@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:6-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  sensor-api:
+    build: ./sensor-api
+    container_name: sensor-api
+    depends_on:
+      - redis
+      - python-api
+    environment:
+      REDIS_HOST: redis
+      PYTHON_API_URL: http://python-api:5000/event
+    ports:
+      - "3000:3000"
+
+  python-api:
+    build: ./event-api
+    container_name: python-api
+    depends_on:
+      - redis
+      - rabbitmq
+    environment:
+      REDIS_HOST: redis
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "5000:5000"
+
+  php-api:
+    build: ./logistics-api
+    container_name: php-api
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8000:8000"
